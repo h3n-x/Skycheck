@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkyCheck Icon Generator</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f0f9ff;
+      color: #2d3748;
+    }
+    h1 {
+      color: #2b6cb0;
+      text-align: center;
+    }
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      margin-top: 30px;
+    }
+    .icon-container {
+      background-color: white;
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      width: 200px;
+    }
+    canvas {
+      border: 1px solid #e2e8f0;
+      margin-bottom: 10px;
+    }
+    button {
+      background-color: #4299e1;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-weight: 500;
+      margin-top: 10px;
+    }
+    button:hover {
+      background-color: #3182ce;
+    }
+    .download-all {
+      display: block;
+      margin: 30px auto;
+      padding: 12px 24px;
+      font-size: 16px;
+    }
+    .instructions {
+      background-color: #ebf8ff;
+      border-left: 4px solid #4299e1;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 0 4px 4px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>SkyCheck Icon Generator</h1>
+  
+  <div class="instructions">
+    <p><strong>Instructions:</strong> This tool generates PNG icons from SVG files for the SkyCheck PWA. Click on the "Generate Icons" button to create all icons, then download them individually or all at once.</p>
+    <p>After downloading, place the icons in the appropriate directories in your project.</p>
+  </div>
+  
+  <button id="generateAll" class="download-all">Generate All Icons</button>
+  
+  <div class="container" id="iconContainer"></div>
+  
+  <script>
+    // Icon configurations
+    const icons = [
+      { name: 'icon-192x192', width: 192, height: 192, svgPath: '/icons/icon-192x192.svg' },
+      { name: 'icon-512x512', width: 512, height: 512, svgPath: '/icons/icon-512x512.svg' },
+      { name: 'current-96x96', width: 96, height: 96, svgPath: '/icons/current-96x96.svg' },
+      { name: 'forecast-96x96', width: 96, height: 96, svgPath: '/icons/forecast-96x96.svg' },
+      { name: 'badge-96x96', width: 96, height: 96, svgPath: '/icons/badge-96x96.svg' },
+      { name: 'apple-touch-icon', width: 180, height: 180, svgPath: '/icons/icon-192x192.svg' }
+    ];
+    
+    // Create icon containers
+    icons.forEach(icon => {
+      const container = document.createElement('div');
+      container.className = 'icon-container';
+      
+      const title = document.createElement('h3');
+      title.textContent = icon.name;
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = icon.width;
+      canvas.height = icon.height;
+      canvas.id = `canvas-${icon.name}`;
+      canvas.style.width = '150px';
+      canvas.style.height = '150px';
+      
+      const downloadBtn = document.createElement('button');
+      downloadBtn.textContent = 'Download';
+      downloadBtn.id = `download-${icon.name}`;
+      downloadBtn.disabled = true;
+      
+      container.appendChild(title);
+      container.appendChild(canvas);
+      container.appendChild(downloadBtn);
+      
+      document.getElementById('iconContainer').appendChild(container);
+    });
+    
+    // Generate all icons
+    document.getElementById('generateAll').addEventListener('click', async () => {
+      for (const icon of icons) {
+        await generateIcon(icon);
+      }
+    });
+    
+    // Generate individual icon
+    async function generateIcon(icon) {
+      const canvas = document.getElementById(`canvas-${icon.name}`);
+      const ctx = canvas.getContext('2d');
+      
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      try {
+        // Load SVG
+        const response = await fetch(icon.svgPath);
+        const svgText = await response.text();
+        
+        // Create SVG blob
+        const blob = new Blob([svgText], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+        
+        // Create image from SVG
+        const img = new Image();
+        img.src = url;
+        
+        // Draw image to canvas when loaded
+        await new Promise(resolve => {
+          img.onload = () => {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            
+            // Enable download button
+            const downloadBtn = document.getElementById(`download-${icon.name}`);
+            downloadBtn.disabled = false;
+            
+            // Set up download handler
+            downloadBtn.onclick = () => {
+              const dataUrl = canvas.toDataURL('image/png');
+              const a = document.createElement('a');
+              a.href = dataUrl;
+              a.download = `${icon.name}.png`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+            };
+            
+            // Release object URL
+            URL.revokeObjectURL(url);
+            resolve();
+          };
+        });
+        
+        console.log(`Generated ${icon.name}`);
+      } catch (error) {
+        console.error(`Error generating ${icon.name}:`, error);
+      }
+    }
+  </script>
+</body>
+</html>

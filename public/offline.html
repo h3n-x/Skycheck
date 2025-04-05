@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkyCheck - Offline</title>
+  <style>
+    body {
+      font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(to bottom right, #90cdf4, #c3dafe);
+      color: #2d3748;
+      height: 100vh;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0 20px;
+    }
+    .container {
+      background-color: rgba(255, 255, 255, 0.9);
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      max-width: 500px;
+      width: 100%;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      color: #2b6cb0;
+    }
+    p {
+      font-size: 1.1rem;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+    .icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+      color: #4299e1;
+    }
+    .button {
+      background-color: #4299e1;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .button:hover {
+      background-color: #3182ce;
+    }
+    .cached-data {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e2e8f0;
+    }
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: linear-gradient(to bottom right, #2a4365, #1a365d);
+        color: #e2e8f0;
+      }
+      .container {
+        background-color: rgba(26, 32, 44, 0.9);
+      }
+      h1 {
+        color: #90cdf4;
+      }
+      .icon {
+        color: #63b3ed;
+      }
+      .button {
+        background-color: #4299e1;
+      }
+      .button:hover {
+        background-color: #2b6cb0;
+      }
+      .cached-data {
+        border-top: 1px solid #2d3748;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">☁️</div>
+    <h1>No Internet Connection</h1>
+    <p>It seems you don't have an internet connection right now. SkyCheck needs a connection to show you the most up-to-date weather information.</p>
+    <p>We're showing the last information saved in cache.</p>
+    
+    <button class="button" onclick="tryReconnect()">Try to reconnect</button>
+    
+    <div id="cached-weather" class="cached-data">
+      <h2>Last Available Information</h2>
+      <div id="cached-content">
+        <p>Loading cached data...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Try to reconnect
+    function tryReconnect() {
+      window.location.reload();
+    }
+    
+    // Load cached data
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        // Try to load data from IndexedDB
+        const dbPromise = indexedDB.open('skycheck-db', 1);
+        
+        dbPromise.onsuccess = function(event) {
+          const db = event.target.result;
+          if (db.objectStoreNames.contains('weather-data')) {
+            const tx = db.transaction('weather-data', 'readonly');
+            const store = tx.objectStore('weather-data');
+            const getLastWeather = store.get('last-weather');
+            
+            getLastWeather.onsuccess = function() {
+              const weatherData = getLastWeather.result;
+              if (weatherData) {
+                displayCachedWeather(weatherData);
+              } else {
+                document.getElementById('cached-content').innerHTML = '<p>No cached data available.</p>';
+              }
+            };
+          } else {
+            document.getElementById('cached-content').innerHTML = '<p>No cached data available.</p>';
+          }
+        };
+        
+        dbPromise.onerror = function() {
+          document.getElementById('cached-content').innerHTML = '<p>Could not load cached data.</p>';
+        };
+      } catch (error) {
+        document.getElementById('cached-content').innerHTML = '<p>Error loading cached data.</p>';
+      }
+    });
+    
+    // Display cached data
+    function displayCachedWeather(data) {
+      if (!data || !data.location || !data.current) {
+        document.getElementById('cached-content').innerHTML = '<p>Incomplete cached data.</p>';
+        return;
+      }
+      
+      const { location, current } = data;
+      const html = `
+        <div style="text-align: left;">
+          <p><strong>Location:</strong> ${location.city}, ${location.country}</p>
+          <p><strong>Temperature:</strong> ${current.temp}°</p>
+          <p><strong>Condition:</strong> ${current.description}</p>
+          <p><strong>Humidity:</strong> ${current.humidity}%</p>
+          <p><strong>Wind:</strong> ${current.windSpeed} m/s</p>
+          <p><small>Last updated: ${new Date(data.timestamp).toLocaleString()}</small></p>
+        </div>
+      `;
+      
+      document.getElementById('cached-content').innerHTML = html;
+    }
+    
+    // Periodically check for connection
+    setInterval(() => {
+      if (navigator.onLine) {
+        window.location.reload();
+      }
+    }, 30000); // Check every 30 seconds
+  </script>
+</body>
+</html>

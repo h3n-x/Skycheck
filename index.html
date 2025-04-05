@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/weather-icon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- SEO Metatags -->
+    <title>SkyCheck - Weather Application</title>
+    <meta name="description" content="SkyCheck offers detailed weather information with a modern and attractive design. Check current weather, forecast, air quality, astronomy and more." />
+    <meta name="keywords" content="weather, forecast, meteorology, air quality, UV index, astronomy, weather prediction" />
+    <meta name="author" content="SkyCheck" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://skycheck.app/" />
+    <meta property="og:title" content="SkyCheck - Weather Application with Detailed Data" />
+    <meta property="og:description" content="Check current weather, forecast, air quality, astronomy and more with a modern and attractive design." />
+    <meta property="og:image" content="/skycheck-preview.png" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://skycheck.app/" />
+    <meta property="twitter:title" content="SkyCheck - Weather Application with Detailed Data" />
+    <meta property="twitter:description" content="Check current weather, forecast, air quality, astronomy and more with a modern and attractive design." />
+    <meta property="twitter:image" content="/skycheck-preview.png" />
+    
+    <!-- Performance -->
+    <link rel="preconnect" href="https://api.openweathermap.org">
+    <link rel="preconnect" href="https://api.weatherapi.com">
+    <link rel="preconnect" href="https://api.tomorrow.io">
+    <link rel="dns-prefetch" href="https://api.openweathermap.org">
+    <link rel="dns-prefetch" href="https://api.weatherapi.com">
+    <link rel="dns-prefetch" href="https://api.tomorrow.io">
+    
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#90cdf4" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="SkyCheck" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.svg" />
+    
+    <!-- Accessibility -->
+    <script>
+      // Check if user prefers reduced motion
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReducedMotion) {
+        document.documentElement.classList.add('reduce-motion');
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      <div style="padding: 20px; text-align: center;">
+        <h1>SkyCheck requires JavaScript</h1>
+        <p>Please enable JavaScript in your browser to use this application.</p>
+      </div>
+    </noscript>
+    <script type="module" src="/src/main.jsx"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+              console.log('Service Worker successfully registered:', registration.scope);
+            })
+            .catch(error => {
+              console.error('Error registering Service Worker:', error);
+            });
+        });
+      }
+      
+      // Store weather data in IndexedDB for offline access
+      window.addEventListener('DOMContentLoaded', () => {
+        const dbPromise = indexedDB.open('skycheck-db', 1);
+        
+        dbPromise.onupgradeneeded = function(event) {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains('weather-data')) {
+            db.createObjectStore('weather-data');
+          }
+          if (!db.objectStoreNames.contains('pending-requests')) {
+            db.createObjectStore('pending-requests', { keyPath: 'id' });
+          }
+        };
+        
+        // Listen for custom events to save weather data
+        window.addEventListener('weather-data-updated', function(e) {
+          if (!e.detail) return;
+          
+          dbPromise.onsuccess = function(event) {
+            const db = event.target.result;
+            const tx = db.transaction('weather-data', 'readwrite');
+            const store = tx.objectStore('weather-data');
+            
+            // Add timestamp to know when data was saved
+            const weatherData = {
+              ...e.detail,
+              timestamp: new Date().getTime()
+            };
+            
+            store.put(weatherData, 'last-weather');
+          };
+        });
+      });
+    </script>
+  </body>
+</html>
