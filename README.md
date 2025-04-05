@@ -2,7 +2,7 @@
 
 Una aplicación moderna de clima con una interfaz visualmente atractiva, desarrollada con React, Vite y Tailwind CSS.
 
-![SkyCheck Screenshot](https://via.placeholder.com/800x450.png?text=SkyCheck+Screenshot)
+![SkyCheck Screenshot](https://github.com/user-attachments/assets/8016c8b6-d612-494d-be54-d56530c4d5aa)
 
 ## Características
 
